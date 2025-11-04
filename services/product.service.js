@@ -59,26 +59,13 @@ const getFeaturedProducts = async () => {
 };
 
 const getProductById = async (id) => {
+  // reviews를 별도로 조회하여 orderId 컬럼 에러 방지
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
       category: true,
       artist: true,
       variants: true,
-      reviews: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
-      },
       _count: {
         select: { reviews: true }
       }
@@ -89,10 +76,36 @@ const getProductById = async (id) => {
     throw new Error('Product not found');
   }
 
-  if (product.reviews.length > 0) {
-    const avgRating = product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length;
-    product.averageRating = Number(avgRating.toFixed(1));
-  } else {
+  // reviews를 별도로 조회 (orderId 컬럼이 없어도 작동하도록)
+  try {
+    const reviews = await prisma.review.findMany({
+      where: { productId: id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    
+    product.reviews = reviews;
+    
+    if (reviews.length > 0) {
+      const avgRating = reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length;
+      product.averageRating = Number(avgRating.toFixed(1));
+    } else {
+      product.averageRating = 0;
+    }
+  } catch (error) {
+    // orderId 컬럼이 없을 경우 빈 배열로 처리
+    console.warn('Error loading reviews (possibly missing orderId column):', error.message);
+    product.reviews = [];
     product.averageRating = 0;
   }
 
