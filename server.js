@@ -23,8 +23,11 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: '*',
-  credentials: true
+  origin: 'https://web-react-vite-lyck7j6jacfc5343.sel5.cloudtype.app', 'http://localhost:5173', 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 3600
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
